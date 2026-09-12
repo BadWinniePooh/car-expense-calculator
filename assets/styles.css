@@ -1,27 +1,48 @@
+/*
+ * Instrument-cluster palette: cool dashboard neutrals, with the amber of a
+ * low-fuel warning light as the single accent. Numerals are set in a mono
+ * face so figures line up like a trip computer readout.
+ */
 :root {
-  color-scheme: light dark;
-  --bg: #f5f6f8;
+  --ground: #eef1f4;
   --surface: #ffffff;
-  --text: #15181d;
-  --muted: #5c6470;
-  --border: #dfe3e9;
-  --accent: #1d6f42;
-  --accent-soft: #e8f3ec;
-  --error: #b3261e;
-  --radius: 12px;
+  --surface-sunk: #f5f7f9;
+  --ink: #16191d;
+  --muted: #5a636e;
+  --border: #d7dce2;
+  --accent: #ad5309;
+  --signal: #e8a01c;
+  --error: #a52218;
+
+  --font-ui: Archivo, "Helvetica Neue", Arial, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --radius: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14171c;
-    --surface: #1d2127;
-    --text: #eef1f5;
-    --muted: #9aa4b2;
-    --border: #2e343d;
-    --accent: #5cc98d;
-    --accent-soft: #1d2f26;
-    --error: #f2836f;
+  :root:not([data-theme='light']) {
+    --ground: #101317;
+    --surface: #181c22;
+    --surface-sunk: #121519;
+    --ink: #e9edf2;
+    --muted: #98a2ae;
+    --border: #272d35;
+    --accent: #f0a621;
+    --signal: #f0a621;
+    --error: #ef8574;
   }
+}
+
+:root[data-theme='dark'] {
+  --ground: #101317;
+  --surface: #181c22;
+  --surface-sunk: #121519;
+  --ink: #e9edf2;
+  --muted: #98a2ae;
+  --border: #272d35;
+  --accent: #f0a621;
+  --signal: #f0a621;
+  --error: #ef8574;
 }
 
 * {
@@ -30,45 +51,73 @@
 
 body {
   margin: 0;
-  padding: 24px 16px 48px;
-  background: var(--bg);
-  color: var(--text);
-  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-block: 32px 56px;
+  padding-inline: 16px;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 .app {
-  max-width: 680px;
+  max-width: 660px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
+}
+
+/* ---- header ---- */
+
+.app__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app__eyebrow {
+  margin: 0;
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 .app__header h1 {
-  margin: 0 0 6px;
-  font-size: 1.65rem;
-  letter-spacing: -0.02em;
+  margin: 0;
+  font-size: clamp(1.7rem, 6vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-wrap: balance;
 }
 
 .app__subtitle {
   margin: 0;
+  max-width: 52ch;
   color: var(--muted);
 }
+
+/* ---- form ---- */
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 20px;
 }
 
 .field {
@@ -79,12 +128,17 @@ body {
 }
 
 label {
+  font-size: 0.78rem;
   font-weight: 600;
-  font-size: 0.92rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .unit {
+  font-family: var(--font-data);
   font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--muted);
 }
 
@@ -92,11 +146,17 @@ input,
 select {
   width: 100%;
   padding: 10px 12px;
-  font: inherit;
+  font-family: var(--font-ui);
+  font-size: 1rem;
   color: inherit;
-  background: var(--bg);
+  background: var(--surface-sunk);
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+
+input {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
 }
 
 input:focus-visible,
@@ -107,68 +167,100 @@ select:focus-visible {
 
 .hint {
   margin: 0;
-  font-size: 0.81rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
   color: var(--muted);
 }
 
 .error {
   margin: 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--error);
   color: var(--error);
   font-size: 0.9rem;
   font-weight: 600;
 }
 
+/* ---- readout ---- */
+
 .result {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  gap: 12px;
+  gap: 16px;
+  /* The amber bar reads as the gauge's own indicator light. */
+  border-top: 3px solid var(--signal);
+  border-radius: 3px 3px var(--radius) var(--radius);
 }
 
 .result__label {
   margin: 0;
-  font-size: 0.85rem;
+  font-family: var(--font-data);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
 }
 
 .result__total {
-  margin: 0;
-  font-size: 2.4rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  margin: -6px 0 0;
+  font-family: var(--font-data);
+  font-size: clamp(2.6rem, 12vw, 3.4rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 1;
   color: var(--accent);
 }
 
 .result__details {
   margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
 }
 
 .result__details dt {
-  font-size: 0.81rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
 .result__details dd {
-  margin: 2px 0 0;
-  font-weight: 600;
+  margin: 3px 0 0;
+  font-family: var(--font-data);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
 }
 
+/* ---- footer ---- */
+
 .app__footer {
-  font-size: 0.88rem;
-  color: var(--muted);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.app__footer p {
+  margin: 0;
+  max-width: 62ch;
 }
 
 .app__footer strong {
-  color: var(--text);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 [hidden] {
   display: none !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .result {
+    transition: border-color 160ms ease;
+  }
 }
