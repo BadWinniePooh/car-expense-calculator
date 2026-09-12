@@ -7,7 +7,36 @@ price and the distance driven, get the cost.
   the browser tab and is gone when you close it.
 - **No build step and no dependencies.** Plain HTML, CSS and ES modules.
 
-## Running it
+## Running it with Docker
+
+Docker is the only thing you need installed — no Node, no toolchain:
+
+```bash
+docker compose up -d        # http://localhost:8080
+docker compose down
+```
+
+That builds a single-stage image (nginx serving the static files) and runs it
+as the unprivileged `nginx` user on port 8080, with a `/healthz` endpoint
+Compose uses for its health check.
+
+The test suite runs in a container too, so a checkout needs no local Node:
+
+```bash
+docker compose run --rm test
+```
+
+To change the published port, edit the `ports` mapping in `compose.yaml` — the
+left-hand number is the host port (`"3000:8080"` serves it on port 3000).
+
+Without Compose:
+
+```bash
+docker build -t trip-cost-calculator .
+docker run --rm -p 8080:8080 trip-cost-calculator
+```
+
+## Running it without Docker
 
 ES modules are blocked over `file://`, so serve the folder over HTTP:
 
@@ -46,6 +75,9 @@ The result is **fuel only** — no wear, tyres, insurance, depreciation or tolls
 | `src/data.js`        | Static vehicle classes and default fuel prices, with sources     |
 | `src/app.js`         | Form wiring, live recalculation, formatting                      |
 | `test/calc.test.js`  | Tests for the math and for the integrity of the static data      |
+| `Dockerfile`         | Single-stage nginx image, runs unprivileged on port 8080         |
+| `docker/nginx.conf`  | Server block: MIME types, cache policy, security headers         |
+| `compose.yaml`       | `web` service, plus a `test` service under the `tools` profile   |
 
 ## Reference vehicle
 
