@@ -126,9 +126,26 @@ button {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-dim);
+  background: none;
   border: 1px solid var(--line-card);
   border-radius: 999px;
   padding: 5px 12px;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+
+.pill:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.pill:not(:disabled) {
+  color: var(--accent-light);
+  border-color: rgba(31, 111, 235, 0.45);
+}
+
+.pill:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent-lighter);
 }
 
 .masthead h1 {
@@ -210,6 +227,14 @@ button {
 
 /* ---- powertrain switch ---- */
 
+.picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .segmented {
   display: inline-flex;
   gap: 4px;
@@ -240,6 +265,55 @@ button {
 .segmented__option[aria-pressed='true'] {
   background: var(--accent);
   color: var(--text-bright);
+}
+
+/* ---- custom car editor ---- */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--line-card);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.editor__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.editor__title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.editor__hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editor__error {
+  margin: 0;
+  font-size: 12.5px;
+  color: #f2836f;
+  border-left: 2px solid #f2836f;
+  padding-left: 10px;
 }
 
 /* ---- vehicle cards ---- */
@@ -348,6 +422,17 @@ button {
   color: var(--text-muted);
 }
 
+.field select {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  padding: 13px 14px;
+  border: 1px solid var(--line-input);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+
 .field input {
   font-family: var(--font-mono);
   font-size: 19px;
@@ -359,7 +444,8 @@ button {
   width: 100%;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   outline: none;
   border-color: var(--accent);
   background: var(--surface-focus);
@@ -406,6 +492,29 @@ button {
   background: var(--accent);
   color: var(--text-bright);
 }
+
+.chip--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--text-bright);
+}
+
+.chip--primary:hover {
+  border-color: var(--accent-light);
+  background: var(--accent-light);
+  color: var(--text-bright);
+}
+
+.chip--danger {
+  margin-left: auto;
+  color: #f2836f;
+}
+
+.chip--danger:hover {
+  border-color: #f2836f;
+  color: #f2836f;
+}
+
 
 /* ---- split ---- */
 
@@ -587,4 +696,14 @@ button {
   * {
     transition: none !important;
   }
+}
+
+#custom-name {
+  font-family: var(--font-ui);
+  font-size: 15px;
+}
+
+/* The saved car is marked in the grid so it is never mistaken for a class average. */
+.card__fuel--custom {
+  color: var(--accent-light);
 }

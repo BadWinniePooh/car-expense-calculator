@@ -4,8 +4,10 @@ A small web app that answers one question: **what does this drive actually cost?
 class, confirm the price at your pump, enter the distance — get the fuel cost *plus* the share of
 ownership that distance consumes.
 
-- **No persistence.** No database, no backend, no `localStorage`, no cookies. Everything happens in
-  the browser tab and is gone when you close it.
+- **Nothing is sent anywhere.** No database, no backend, no analytics. The page makes no network
+  calls at all, and the CSP (`connect-src 'none'`) enforces it rather than merely promising it.
+- **Nothing is kept, with one deliberate exception:** a custom car you configure and explicitly
+  save. See [Your own car](#your-own-car).
 - **No build step and no dependencies.** Plain HTML, CSS and ES modules.
 
 The interface implements a [Claude Design](https://claude.ai/design) artboard: a single dark visual
@@ -88,8 +90,10 @@ so it is deliberately absent from the upkeep table.
 | `assets/styles.css`  | The design system — dark only, tokenised                         |
 | `src/calc.js`        | Pure cost math — no DOM, no I/O, unit tested                     |
 | `src/data.js`        | Vehicle classes, fuel prices and upkeep rates, with sources      |
+| `src/profile.js`     | The only persisted state: load, validate and save a custom car   |
 | `src/app.js`         | State, rendering and live recalculation                          |
 | `test/calc.test.js`  | Tests for the math and for the integrity of the static data      |
+| `test/profile.test.js` | Tests for persistence, validation and hostile storage content  |
 | `Dockerfile`         | Single-stage nginx image, runs unprivileged on port 8080         |
 | `docker/nginx.conf`  | Server block: MIME types, cache policy, security headers         |
 | `compose.yaml`       | `web` service, plus a `test` service under the `tools` profile   |
@@ -103,6 +107,29 @@ WLTP ratings of 5.8 and 6.3 respectively).
 
 Consumption figures are **real-world**, not WLTP, which runs 5–15 % optimistic. EV consumption is
 measured at the charger, so it includes charging losses.
+
+## Your own car
+
+The built-in classes are averages. If you know your own car's figures, press **+ my car**, fill in
+its consumption and its three upkeep rates, and save. It appears in the card grid alongside the
+built-in classes, marked `your car`, and is selected automatically when the page next loads.
+
+It is stored in `localStorage`, which means:
+
+- **on this device and this browser only** — it does not sync, and it never leaves the machine;
+- it survives closing the tab, and the "nothing is stored" badge in the header changes to
+  **"1 car saved here"** so the page never claims more privacy than it delivers. Clicking that
+  badge reopens the car for editing, and **Forget this car** removes it.
+
+Depreciation is the figure worth thinking about. The built-in rates assume a *new* car losing value
+over five years; if yours is paid off, set depreciation to `0` and the estimate drops to fuel plus
+running costs. That is a legitimate configuration and the validator allows it.
+
+Storage is treated as untrusted input. Anything read back is validated against the fuel list and a
+set of plausibility bounds before it reaches the app — a hand-edited entry, a value from a future
+schema version, or plain junk is discarded rather than guessed at, and the app falls back to the
+built-in default. Private-browsing modes that throw on storage access are handled too: the app
+stays fully usable, it just cannot remember anything.
 
 ## Data research
 

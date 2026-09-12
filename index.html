@@ -28,12 +28,14 @@
           <div class="masthead__meta">
             <span class="eyebrow">Trip cost estimator</span>
             <span class="masthead__rule"></span>
-            <span class="pill">nothing is stored</span>
+            <button type="button" class="pill" id="storage-pill" disabled>
+              nothing is stored
+            </button>
           </div>
           <h1>What does this drive actually cost?</h1>
           <p class="lede">
-            Choose a vehicle class, confirm the price at your pump, enter the distance. Everything
-            stays in this tab — close it and it is gone.
+            Choose a vehicle class, confirm the price at your pump, enter the distance. Nothing is
+            sent anywhere — and nothing is kept, unless you save a car of your own.
           </p>
         </header>
 
@@ -45,7 +47,56 @@
                 <span class="block__note">real-world averages</span>
               </div>
 
-              <div class="segmented" role="group" aria-label="Powertrain"></div>
+              <div class="picker">
+                <div class="segmented" role="group" aria-label="Powertrain"></div>
+                <button type="button" class="chip" id="custom-toggle" aria-expanded="false" aria-controls="editor">
+                  + my car
+                </button>
+              </div>
+
+              <form class="editor" id="editor" hidden>
+                <div class="editor__head">
+                  <h3 class="editor__title">Your car</h3>
+                  <span class="editor__hint">Saved in this browser only, until you forget it</span>
+                </div>
+
+                <div class="fields">
+                  <label class="field">
+                    <span class="field__label">Name</span>
+                    <input id="custom-name" type="text" maxlength="40" placeholder="My car" />
+                  </label>
+                  <label class="field">
+                    <span class="field__label">Fuel</span>
+                    <select id="custom-fuel"></select>
+                  </label>
+                  <label class="field">
+                    <span class="field__label" id="custom-cons-label">Consumption (l/100 km)</span>
+                    <input id="custom-cons" type="number" step="0.1" min="0" inputmode="decimal" />
+                  </label>
+                  <label class="field">
+                    <span class="field__label">Wear &amp; service (ct/km)</span>
+                    <input id="custom-wear" type="number" step="0.1" min="0" inputmode="decimal" />
+                  </label>
+                  <label class="field">
+                    <span class="field__label">Insurance &amp; tax (ct/km)</span>
+                    <input id="custom-fixed" type="number" step="0.1" min="0" inputmode="decimal" />
+                  </label>
+                  <label class="field">
+                    <span class="field__label">Depreciation (ct/km)</span>
+                    <input id="custom-dep" type="number" step="0.1" min="0" inputmode="decimal" />
+                  </label>
+                </div>
+
+                <p class="editor__error" id="editor-error" role="alert" hidden></p>
+
+                <div class="editor__actions">
+                  <button type="submit" class="chip chip--primary">Save to this browser</button>
+                  <button type="button" class="chip" id="custom-cancel">Cancel</button>
+                  <button type="button" class="chip chip--danger" id="custom-delete" hidden>
+                    Forget this car
+                  </button>
+                </div>
+              </form>
 
               <div class="cards" id="vehicle-cards" role="group" aria-label="Vehicle class"></div>
             </section>
