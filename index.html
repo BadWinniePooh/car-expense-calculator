@@ -6,13 +6,14 @@
     <title>Trip Cost Calculator</title>
     <meta
       name="description"
-      content="Estimate what a drive costs: pick a vehicle class, enter the fuel price and the distance."
+      content="What a drive actually costs: fuel plus the share of ownership it consumes. Pick a vehicle class, confirm the price at your pump, enter the distance."
     />
+    <meta name="color-scheme" content="dark" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
     />
     <link rel="stylesheet" href="assets/styles.css" />
     <link
@@ -21,111 +22,109 @@
     />
   </head>
   <body>
-    <main class="app">
-      <header class="app__header">
-        <p class="app__eyebrow">Fuel cost per trip</p>
-        <h1>What did that drive cost?</h1>
-        <p class="app__subtitle">
-          Pick a vehicle, enter the current fuel price and the distance — get an estimate of what
-          the drive costs.
-        </p>
-      </header>
+    <div class="page">
+      <div class="shell">
+        <header class="masthead">
+          <div class="masthead__meta">
+            <span class="eyebrow">Trip cost estimator</span>
+            <span class="masthead__rule"></span>
+            <span class="pill">nothing is stored</span>
+          </div>
+          <h1>What does this drive actually cost?</h1>
+          <p class="lede">
+            Choose a vehicle class, confirm the price at your pump, enter the distance. Everything
+            stays in this tab — close it and it is gone.
+          </p>
+        </header>
 
-      <form id="trip-form" class="card" novalidate>
-        <div class="field">
-          <label for="vehicle">Vehicle</label>
-          <select id="vehicle" name="vehicle"></select>
-          <p class="hint" id="vehicle-hint"></p>
+        <div class="columns">
+          <div class="controls">
+            <section class="block">
+              <div class="block__head">
+                <h2 class="block__title">01 / vehicle</h2>
+                <span class="block__note">real-world averages</span>
+              </div>
+
+              <div class="segmented" role="group" aria-label="Powertrain"></div>
+
+              <div class="cards" id="vehicle-cards" role="group" aria-label="Vehicle class"></div>
+            </section>
+
+            <section class="block block--numbers">
+              <h2 class="block__title block__title--ruled">02 / numbers</h2>
+
+              <div class="fields">
+                <label class="field">
+                  <span class="field__label" id="consumption-label">Consumption (l/100 km)</span>
+                  <input
+                    id="consumption"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    inputmode="decimal"
+                    aria-describedby="consumption-label"
+                  />
+                </label>
+                <label class="field">
+                  <span class="field__label" id="price-label">Petrol price (€/l)</span>
+                  <input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputmode="decimal"
+                    aria-describedby="price-label"
+                  />
+                </label>
+                <label class="field">
+                  <span class="field__label">Distance (km)</span>
+                  <input id="distance" type="number" step="1" min="0" inputmode="decimal" />
+                </label>
+              </div>
+
+              <div class="chips">
+                <div class="chips__presets" id="presets"></div>
+                <button type="button" class="chip chip--toggle" id="round-trip" aria-pressed="false">
+                  return trip ×2
+                </button>
+              </div>
+
+              <div class="split">
+                <span class="split__label">Split between</span>
+                <div class="split__options" id="people" role="group" aria-label="Number of people"></div>
+                <span class="split__label" id="people-word">person</span>
+              </div>
+
+              <p class="error" id="error" role="alert" hidden></p>
+            </section>
+          </div>
+
+          <aside class="readout" aria-live="polite">
+            <div class="readout__head">
+              <span class="readout__label">Estimated cost</span>
+              <div class="readout__total" id="total">—</div>
+              <span class="readout__summary" id="summary"></span>
+            </div>
+            <div class="metrics" id="metrics"></div>
+            <p class="readout__note">
+              Estimate only. Consumption and upkeep figures are class averages — driving style,
+              load, terrain and weather shift the result by roughly ±25%.
+            </p>
+          </aside>
         </div>
 
-        <div class="field">
-          <label for="fuel-type">Fuel type</label>
-          <select id="fuel-type" name="fuel-type"></select>
-          <p class="hint" id="fuel-hint"></p>
-        </div>
-
-        <div class="grid">
-          <div class="field">
-            <label for="consumption">
-              Consumption <span class="unit" id="consumption-unit">(l/100 km)</span>
-            </label>
-            <input
-              id="consumption"
-              name="consumption"
-              type="number"
-              inputmode="decimal"
-              min="0"
-              step="0.1"
-              required
-            />
-            <p class="hint">Prefilled with a real-world average — overwrite it with your own.</p>
-          </div>
-
-          <div class="field">
-            <label for="price">
-              Fuel price <span class="unit" id="price-unit">(€/l)</span>
-            </label>
-            <input
-              id="price"
-              name="price"
-              type="number"
-              inputmode="decimal"
-              min="0"
-              step="0.001"
-              required
-            />
-            <p class="hint" id="price-hint"></p>
-          </div>
-
-          <div class="field">
-            <label for="distance">Distance (km)</label>
-            <input
-              id="distance"
-              name="distance"
-              type="number"
-              inputmode="decimal"
-              min="0"
-              step="1"
-              placeholder="e.g. 250"
-              required
-            />
-            <p class="hint">The kilometres you drove, or plan to drive.</p>
-          </div>
-        </div>
-
-        <p class="error" id="error" role="alert" hidden></p>
-      </form>
-
-      <section class="card result" id="result" aria-live="polite" hidden>
-        <p class="result__label">Estimated cost of this drive</p>
-        <p class="result__total" id="result-total">—</p>
-        <dl class="result__details">
-          <div>
-            <dt id="result-fuel-label">Fuel needed</dt>
-            <dd id="result-fuel">—</dd>
-          </div>
-          <div>
-            <dt>Cost per km</dt>
-            <dd id="result-per-km">—</dd>
-          </div>
-          <div>
-            <dt>Cost per 100 km</dt>
-            <dd id="result-per-100">—</dd>
-          </div>
-        </dl>
-        <p class="hint">
-          Fuel only — this does not include wear, tyres, insurance, depreciation or tolls.
-        </p>
-      </section>
-
-      <footer class="app__footer">
-        <p>
-          <strong>Nothing is stored.</strong> The calculation runs entirely in your browser; no
-          input is sent anywhere, and nothing is saved between visits.
-        </p>
-        <p class="hint" id="data-note"></p>
-      </footer>
-    </main>
+        <footer class="footnote">
+          <p>
+            <strong>Upkeep</strong> is the full cost of owning the car, spread over the distance
+            driven: <em>wear &amp; service</em> (inspections, repairs, tyres, brakes),
+            <em>insurance &amp; tax</em>, and <em>depreciation</em> — the largest block of all.
+            Figures are class averages in cents per kilometre on the ADAC basis of a new car held
+            5 years at 15,000 km a year, derived from published per-month cost splits.
+          </p>
+          <p class="footnote__data" id="data-note"></p>
+        </footer>
+      </div>
+    </div>
 
     <script type="module" src="src/app.js"></script>
   </body>

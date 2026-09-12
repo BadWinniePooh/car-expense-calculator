@@ -2,177 +2,299 @@ import { estimateTrip } from './calc.js';
 import {
   DATA_AS_OF,
   DEFAULT_VEHICLE_ID,
-  FUEL_TYPES,
-  VEHICLES,
-  getFuelType,
+  DISTANCE_PRESETS,
+  FUELS,
+  PEOPLE_OPTIONS,
+  POWERTRAINS,
+  getFuel,
   getVehicle,
+  upkeepOf,
+  vehiclesFor,
 } from './data.js';
 
 const el = (id) => document.getElementById(id);
 
 const ui = {
-  form: el('trip-form'),
-  vehicle: el('vehicle'),
-  vehicleHint: el('vehicle-hint'),
-  fuelType: el('fuel-type'),
-  fuelHint: el('fuel-hint'),
+  segmented: document.querySelector('.segmented'),
+  cards: el('vehicle-cards'),
   consumption: el('consumption'),
-  consumptionUnit: el('consumption-unit'),
+  consumptionLabel: el('consumption-label'),
   price: el('price'),
-  priceUnit: el('price-unit'),
-  priceHint: el('price-hint'),
+  priceLabel: el('price-label'),
   distance: el('distance'),
+  presets: el('presets'),
+  roundTrip: el('round-trip'),
+  people: el('people'),
+  peopleWord: el('people-word'),
   error: el('error'),
-  result: el('result'),
-  resultTotal: el('result-total'),
-  resultFuel: el('result-fuel'),
-  resultFuelLabel: el('result-fuel-label'),
-  resultPerKm: el('result-per-km'),
-  resultPer100: el('result-per-100'),
+  total: el('total'),
+  summary: el('summary'),
+  metrics: el('metrics'),
   dataNote: el('data-note'),
 };
 
-const money = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR' });
-const moneyPrecise = new Intl.NumberFormat('en-GB', {
-  style: 'currency',
-  currency: 'EUR',
-  minimumFractionDigits: 3,
-  maximumFractionDigits: 3,
-});
-const amount = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 2 });
+/**
+ * All state lives here and nowhere else — no storage, no query string. Closing
+ * the tab is what "nothing is stored" means, so it has to be true of the code.
+ *
+ * Prices are kept per fuel so that switching between a petrol and a diesel car
+ * does not overwrite a price the user typed for the other one.
+ */
+const state = {
+  powertrain: 'combustion',
+  vehicleId: DEFAULT_VEHICLE_ID,
+  consumption: String(getVehicle(DEFAULT_VEHICLE_ID).cons),
+  prices: Object.fromEntries(
+    Object.entries(FUELS).map(([id, fuel]) => [id, String(fuel.defaultPrice)]),
+  ),
+  distance: '120',
+  roundTrip: false,
+  people: 1,
+};
 
-/** True while the user has not overridden the field for the current selection. */
-let priceIsPristine = true;
+const decimal = (digits) =>
+  new Intl.NumberFormat('de-DE', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
-function populateVehicles() {
-  const groups = new Map();
-  for (const vehicle of VEHICLES) {
-    if (!groups.has(vehicle.category)) groups.set(vehicle.category, []);
-    groups.get(vehicle.category).push(vehicle);
-  }
+const fmt = (value, digits) => decimal(digits).format(value);
+const money = (value, digits = 2) => `€ ${fmt(value, digits)}`;
 
-  for (const [category, vehicles] of groups) {
-    const group = document.createElement('optgroup');
-    group.label = category;
-    for (const vehicle of vehicles) {
-      const option = document.createElement('option');
-      option.value = vehicle.id;
-      option.textContent = vehicle.label;
-      group.append(option);
-    }
-    ui.vehicle.append(group);
-  }
-
-  ui.vehicle.value = DEFAULT_VEHICLE_ID;
+/** Parse a user-typed number, tolerating a comma decimal separator. */
+function num(value) {
+  const parsed = Number.parseFloat(String(value).replace(',', '.'));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-function populateFuelTypes() {
-  for (const [id, fuel] of Object.entries(FUEL_TYPES)) {
-    const option = document.createElement('option');
-    option.value = id;
-    option.textContent = fuel.label;
-    ui.fuelType.append(option);
-  }
+function currentVehicle() {
+  return getVehicle(state.vehicleId);
 }
 
-/** Apply the selected vehicle's defaults to consumption, fuel type and price. */
-function applyVehicleDefaults() {
-  const vehicle = getVehicle(ui.vehicle.value);
-  if (!vehicle) return;
-
-  ui.consumption.value = vehicle.consumptionPer100Km;
-  ui.fuelType.value = vehicle.fuelType;
-  ui.vehicleHint.textContent = [vehicle.examples, vehicle.note].filter(Boolean).join(' — ');
-
-  priceIsPristine = true;
-  applyFuelDefaults();
+function currentFuel() {
+  return getFuel(currentVehicle().fuel);
 }
 
-/** Apply the selected fuel type's unit and — unless edited — its default price. */
-function applyFuelDefaults() {
-  const fuel = getFuelType(ui.fuelType.value);
-  if (!fuel) return;
+/* ---------- rendering ---------- */
 
-  ui.consumptionUnit.textContent = `(${fuel.unit}/100 km)`;
-  ui.priceUnit.textContent = `(€/${fuel.unit})`;
-  ui.resultFuelLabel.textContent = fuel.unit === 'kWh' ? 'Energy needed' : 'Fuel needed';
-  ui.fuelHint.textContent = fuel.source;
-  ui.priceHint.textContent = `Default: ${moneyPrecise.format(fuel.defaultPrice)}/${fuel.unit} (${DATA_AS_OF}). Enter today's price for a better estimate.`;
+function renderSegmented() {
+  ui.segmented.replaceChildren(
+    ...POWERTRAINS.map((option) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'segmented__option';
+      button.textContent = option.label;
+      button.setAttribute('aria-pressed', String(state.powertrain === option.id));
+      button.addEventListener('click', () => selectPowertrain(option.id));
+      return button;
+    }),
+  );
+}
 
-  if (priceIsPristine) {
-    ui.price.value = fuel.defaultPrice;
-  }
+function renderCards() {
+  const vehicles = vehiclesFor(state.powertrain);
 
+  ui.cards.replaceChildren(
+    ...vehicles.map((vehicle) => {
+      const selected = vehicle.id === state.vehicleId;
+      const unit = getFuel(vehicle.fuel).unit;
+      const upkeep = vehicle.wear + vehicle.fixed + vehicle.dep;
+
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'card';
+      card.setAttribute('aria-pressed', String(selected));
+      card.addEventListener('click', () => selectVehicle(vehicle.id));
+
+      const top = document.createElement('div');
+      top.className = 'card__top';
+      top.append(
+        span('card__name', vehicle.name),
+        span('card__fuel', vehicle.badge),
+      );
+
+      const figures = document.createElement('div');
+      figures.className = 'card__figures';
+      figures.append(
+        span('card__consumption', `${fmt(vehicle.cons, 1)} ${unit}/100 km`),
+        span('card__upkeep', `+ ${fmt(upkeep, 1)} ct/km to own`),
+      );
+
+      card.append(top, span('card__examples', vehicle.examples), figures);
+      return card;
+    }),
+  );
+}
+
+function span(className, text) {
+  const node = document.createElement('span');
+  node.className = className;
+  node.textContent = text;
+  return node;
+}
+
+function renderPresets() {
+  ui.presets.replaceChildren(
+    ...DISTANCE_PRESETS.map((km) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'chip';
+      button.textContent = `${km} km`;
+      button.addEventListener('click', () => {
+        state.distance = String(km);
+        ui.distance.value = state.distance;
+        calculate();
+      });
+      return button;
+    }),
+  );
+}
+
+function renderPeople() {
+  ui.people.replaceChildren(
+    ...PEOPLE_OPTIONS.map((n) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'split__option';
+      button.textContent = String(n);
+      button.setAttribute('aria-pressed', String(n === state.people));
+      button.setAttribute('aria-label', `${n} ${n === 1 ? 'person' : 'people'}`);
+      button.addEventListener('click', () => {
+        state.people = n;
+        renderPeople();
+        calculate();
+      });
+      return button;
+    }),
+  );
+  ui.peopleWord.textContent = state.people === 1 ? 'person' : 'people';
+}
+
+/* ---------- selection ---------- */
+
+function selectPowertrain(id) {
+  if (state.powertrain === id) return;
+  state.powertrain = id;
+  // Landing on a powertrain means landing on its first car, so the cards and
+  // the numbers never disagree about which vehicle is selected.
+  selectVehicle(vehiclesFor(id)[0].id);
+  renderSegmented();
+}
+
+function selectVehicle(id) {
+  state.vehicleId = id;
+  state.consumption = String(getVehicle(id).cons);
+  ui.consumption.value = state.consumption;
+  renderCards();
+  syncFuelFields();
   calculate();
 }
 
-function readNumber(input) {
-  if (input.value.trim() === '') return null;
-  const value = Number(input.value);
-  return Number.isFinite(value) ? value : null;
+/** Point the consumption and price fields at the selected car's fuel. */
+function syncFuelFields() {
+  const vehicle = currentVehicle();
+  const fuel = currentFuel();
+
+  ui.consumptionLabel.textContent = `Consumption (${fuel.unit}/100 km)`;
+  ui.priceLabel.textContent = `${fuel.label} price (€/${fuel.unit})`;
+  ui.price.value = state.prices[vehicle.fuel];
+  ui.price.step = fuel.unit === 'kWh' ? '0.01' : '0.001';
 }
 
-function showError(message) {
-  ui.error.textContent = message;
-  ui.error.hidden = false;
-  ui.result.hidden = true;
+/* ---------- result ---------- */
+
+function metricsFor(trip, fuel) {
+  const energy = fuel.unit === 'kWh';
+
+  return [
+    { label: energy ? 'Electricity' : 'Fuel', value: money(trip.fuelCost) },
+    { label: 'Wear & service', value: money(trip.wearCost) },
+    { label: 'Insurance & tax', value: money(trip.fixedCost) },
+    { label: 'Depreciation', value: money(trip.depreciationCost) },
+    { label: energy ? 'Energy used' : 'Fuel used', value: `${fmt(trip.fuelUsed, 1)} ${fuel.unit}` },
+    { label: 'Per km', value: money(trip.costPerKm, 3) },
+    { label: 'Distance', value: `${fmt(trip.distanceKm, 0)} km` },
+    ...(state.people > 1 ? [{ label: 'Per person', value: money(trip.perPerson) }] : []),
+    { label: 'CO₂', value: `${fmt(trip.co2Kg, 1)} kg` },
+  ];
 }
 
-function clearError() {
-  ui.error.hidden = true;
-  ui.error.textContent = '';
+function summaryFor(trip, vehicle, fuel, price) {
+  return [
+    vehicle.name,
+    `${fmt(num(state.consumption), 1)} ${fuel.unit}/100 km`,
+    `${fmt(trip.distanceKm, 0)} km${state.roundTrip ? ' return' : ''} at ${money(price, 2)}/${fuel.unit}`,
+    `incl. ${fmt(trip.upkeepRatePerKm, 1)} ct/km upkeep`,
+  ].join(' · ');
 }
 
 function calculate() {
-  const distanceKm = readNumber(ui.distance);
-  const consumptionPer100Km = readNumber(ui.consumption);
-  const pricePerUnit = readNumber(ui.price);
+  const vehicle = currentVehicle();
+  const fuel = currentFuel();
+  const price = num(state.prices[vehicle.fuel]);
 
-  if (distanceKm === null || consumptionPer100Km === null || pricePerUnit === null) {
-    // Nothing to complain about yet — the user is still filling the form in.
-    clearError();
-    ui.result.hidden = true;
-    return;
+  const negative = [state.consumption, state.prices[vehicle.fuel], state.distance].some(
+    (value) => value.trim() !== '' && Number.parseFloat(String(value).replace(',', '.')) < 0,
+  );
+  if (negative) {
+    ui.error.textContent = 'Consumption, price and distance must not be negative.';
+    ui.error.hidden = false;
+  } else {
+    ui.error.hidden = true;
   }
 
-  if (distanceKm < 0 || consumptionPer100Km < 0 || pricePerUnit < 0) {
-    showError('Distance, consumption and price must not be negative.');
-    return;
-  }
+  const trip = estimateTrip({
+    distanceKm: num(state.distance),
+    consumptionPer100Km: num(state.consumption),
+    pricePerUnit: price,
+    upkeep: upkeepOf(vehicle),
+    co2PerUnit: fuel.co2PerUnit,
+    roundTrip: state.roundTrip,
+    people: state.people,
+  });
 
-  clearError();
-  const fuel = getFuelType(ui.fuelType.value);
-  const trip = estimateTrip({ distanceKm, consumptionPer100Km, pricePerUnit });
+  ui.total.textContent = money(trip.totalCost);
+  ui.summary.textContent = summaryFor(trip, vehicle, fuel, price);
 
-  ui.resultTotal.textContent = money.format(trip.totalCost);
-  ui.resultFuel.textContent = `${amount.format(trip.fuelUsed)} ${fuel.unit}`;
-  ui.resultPerKm.textContent = `${moneyPrecise.format(trip.costPerKm)}/km`;
-  ui.resultPer100.textContent = `${money.format(trip.costPer100Km)}/100 km`;
-  ui.result.hidden = false;
+  ui.metrics.replaceChildren(
+    ...metricsFor(trip, fuel).map((metric) => {
+      const cell = document.createElement('div');
+      cell.className = 'metric';
+      cell.append(span('metric__label', metric.label), span('metric__value', metric.value));
+      return cell;
+    }),
+  );
 }
 
+/* ---------- wiring ---------- */
+
 function init() {
-  populateVehicles();
-  populateFuelTypes();
-  applyVehicleDefaults();
+  renderSegmented();
+  renderCards();
+  renderPresets();
+  renderPeople();
+  syncFuelFields();
 
-  ui.dataNote.textContent = `Default consumption figures are real-world averages for the vehicle class, default prices are German averages as of ${DATA_AS_OF}. Both are estimates — your own figures will always be more accurate.`;
+  ui.consumption.value = state.consumption;
+  ui.distance.value = state.distance;
+  ui.dataNote.textContent = `Fuel prices are German averages as of ${DATA_AS_OF}; consumption figures are real-world class averages, not WLTP. Every number here is editable — your own figures will always beat the defaults.`;
 
-  ui.vehicle.addEventListener('change', applyVehicleDefaults);
-  ui.fuelType.addEventListener('change', () => {
-    priceIsPristine = true;
-    applyFuelDefaults();
+  ui.consumption.addEventListener('input', () => {
+    state.consumption = ui.consumption.value;
+    calculate();
   });
   ui.price.addEventListener('input', () => {
-    priceIsPristine = false;
+    state.prices[currentVehicle().fuel] = ui.price.value;
     calculate();
   });
-  ui.consumption.addEventListener('input', calculate);
-  ui.distance.addEventListener('input', calculate);
-  ui.form.addEventListener('submit', (event) => {
-    event.preventDefault();
+  ui.distance.addEventListener('input', () => {
+    state.distance = ui.distance.value;
     calculate();
   });
+  ui.roundTrip.addEventListener('click', () => {
+    state.roundTrip = !state.roundTrip;
+    ui.roundTrip.setAttribute('aria-pressed', String(state.roundTrip));
+    calculate();
+  });
+
+  calculate();
 }
 
 init();
