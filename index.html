@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trip Cost Calculator</title>
+    <meta
+      name="description"
+      content="Estimate what a drive costs: pick a vehicle class, enter the fuel price and the distance."
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9B%BD%3C/text%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <h1>Trip Cost Calculator</h1>
+        <p class="app__subtitle">
+          Pick a vehicle, enter the current fuel price and the distance — get an estimate of what
+          the drive costs.
+        </p>
+      </header>
+
+      <form id="trip-form" class="card" novalidate>
+        <div class="field">
+          <label for="vehicle">Vehicle</label>
+          <select id="vehicle" name="vehicle"></select>
+          <p class="hint" id="vehicle-hint"></p>
+        </div>
+
+        <div class="field">
+          <label for="fuel-type">Fuel type</label>
+          <select id="fuel-type" name="fuel-type"></select>
+          <p class="hint" id="fuel-hint"></p>
+        </div>
+
+        <div class="grid">
+          <div class="field">
+            <label for="consumption">
+              Consumption <span class="unit" id="consumption-unit">(l/100 km)</span>
+            </label>
+            <input
+              id="consumption"
+              name="consumption"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.1"
+              required
+            />
+            <p class="hint">Prefilled with a real-world average — overwrite it with your own.</p>
+          </div>
+
+          <div class="field">
+            <label for="price">
+              Fuel price <span class="unit" id="price-unit">(€/l)</span>
+            </label>
+            <input
+              id="price"
+              name="price"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.001"
+              required
+            />
+            <p class="hint" id="price-hint"></p>
+          </div>
+
+          <div class="field">
+            <label for="distance">Distance (km)</label>
+            <input
+              id="distance"
+              name="distance"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="1"
+              placeholder="e.g. 250"
+              required
+            />
+            <p class="hint">The kilometres you drove, or plan to drive.</p>
+          </div>
+        </div>
+
+        <p class="error" id="error" role="alert" hidden></p>
+      </form>
+
+      <section class="card result" id="result" aria-live="polite" hidden>
+        <p class="result__label">Estimated cost of this drive</p>
+        <p class="result__total" id="result-total">—</p>
+        <dl class="result__details">
+          <div>
+            <dt id="result-fuel-label">Fuel needed</dt>
+            <dd id="result-fuel">—</dd>
+          </div>
+          <div>
+            <dt>Cost per km</dt>
+            <dd id="result-per-km">—</dd>
+          </div>
+          <div>
+            <dt>Cost per 100 km</dt>
+            <dd id="result-per-100">—</dd>
+          </div>
+        </dl>
+        <p class="hint">
+          Fuel only — this does not include wear, tyres, insurance, depreciation or tolls.
+        </p>
+      </section>
+
+      <footer class="app__footer">
+        <p>
+          <strong>Nothing is stored.</strong> The calculation runs entirely in your browser; no
+          input is sent anywhere, and nothing is saved between visits.
+        </p>
+        <p class="hint" id="data-note"></p>
+      </footer>
+    </main>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

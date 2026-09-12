@@ -1,0 +1,12 @@
+{
+  "name": "trip-cost-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Estimate the fuel cost of a drive. Runs fully in the browser, stores nothing.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node --run serve",
+    "serve": "npx --yes serve . -l 4173"
+  }
+}
